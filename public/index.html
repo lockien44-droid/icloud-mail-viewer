@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mail Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="app-header">
+        <div class="logo" aria-hidden="true">✉</div>
+        <div>
+          <h1>Mail Viewer</h1>
+          <p>Tra cứu nhiều địa chỉ email trong một lần, làm mới nhanh ngay trên web.</p>
+        </div>
+        <div class="timer">Tự làm mới: <strong id="countdown">30s</strong></div>
+      </header>
+
+      <section class="panel">
+        <form id="mailForm" class="toolbar">
+          <label class="field email-field">
+            <span>Email</span>
+            <textarea
+              id="emails"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="route@example.com&#10;user+tag@gmail.com, alias@icloud.com"
+            ></textarea>
+            <small>Nhập nhiều email, mỗi dòng một email hoặc ngăn cách bằng dấu phẩy.</small>
+          </label>
+
+          <label class="field token-field">
+            <span>Mã truy cập</span>
+            <input id="token" type="password" autocomplete="current-password" placeholder="VIEW_TOKEN" />
+          </label>
+
+          <div class="actions">
+            <button class="primary" type="submit">⌕ Tìm mail</button>
+            <button id="refreshBtn" type="button">↻ Làm mới</button>
+          </div>
+        </form>
+
+        <div class="status-line">
+          <div><span>Đang xem</span> <strong id="currentEmail">Chưa chọn email</strong></div>
+          <div><span>Cập nhật</span> <strong id="updatedAt">Chưa cập nhật</strong></div>
+        </div>
+
+        <div id="message" class="message warning">Nhập mã truy cập trước khi tải mail.</div>
+        <div id="results" class="results" hidden></div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

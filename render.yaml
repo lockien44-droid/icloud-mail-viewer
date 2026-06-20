@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: icloud-hide-my-email-viewer
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ICLOUD_EMAIL
+        sync: false
+      - key: ICLOUD_APP_PASSWORD
+        sync: false
+      - key: VIEW_TOKEN
+        sync: false
+      - key: FETCH_LIMIT
+        value: "100"
+      - key: MAILBOX
+        value: INBOX
