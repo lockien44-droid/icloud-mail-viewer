@@ -134,6 +134,7 @@ app.post("/api/mail", async (req, res) => {
     return res.status(500).json({
       error: "Khong doc duoc mail.",
       detail: error.message,
+      code: error.code || "",
     });
   }
 });

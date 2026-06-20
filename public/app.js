@@ -86,7 +86,10 @@ async function loadMail() {
       body: JSON.stringify({ emails, token }),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Không tải được mail.");
+    if (!response.ok) {
+      const details = [data.error, data.detail].filter(Boolean).join(" ");
+      throw new Error(details || "Không tải được mail.");
+    }
 
     updatedAt.textContent = formatDate(data.updatedAt);
     results.hidden = false;
