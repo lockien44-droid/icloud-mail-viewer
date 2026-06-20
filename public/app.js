@@ -96,7 +96,8 @@ async function loadMail() {
     results.innerHTML = data.mails.length
       ? data.mails.map(renderMail).join("")
       : "";
-    setMessage(data.mails.length ? `Tìm thấy ${data.mails.length} thư.` : "Không tìm thấy thư nào khớp email đã nhập.", data.mails.length ? "ok" : "info");
+    const emptyMessage = `Không tìm thấy thư nào khớp email đã nhập. Đã quét ${data.scanned ?? 0} thư trong ${data.mailbox || "INBOX"}.`;
+    setMessage(data.mails.length ? `Tìm thấy ${data.mails.length} thư.` : emptyMessage, data.mails.length ? "ok" : "info");
     seconds = 30;
   } catch (error) {
     results.hidden = true;

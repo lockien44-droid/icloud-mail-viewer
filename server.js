@@ -117,6 +117,8 @@ app.post("/api/mail", async (req, res) => {
       return res.json({
         emails: targets,
         updatedAt: new Date().toISOString(),
+        mailbox: mailboxName,
+        scanned: 0,
         count: 0,
         mails: [],
       });
@@ -125,8 +127,10 @@ app.post("/api/mail", async (req, res) => {
     const start = Math.max(1, total - fetchLimit + 1);
     const range = `${start}:*`;
     const mails = [];
+    let scanned = 0;
 
     for await (const msg of client.fetch(range, { source: true, uid: true })) {
+      scanned += 1;
       const parsed = await simpleParser(msg.source);
       const matched = findMatchedTarget(parsed, targets);
 
@@ -152,6 +156,8 @@ app.post("/api/mail", async (req, res) => {
     return res.json({
       emails: targets,
       updatedAt: new Date().toISOString(),
+      mailbox: mailboxName,
+      scanned,
       count: mails.length,
       mails,
     });
