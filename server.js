@@ -47,6 +47,35 @@ function requireServerConfig() {
   return "";
 }
 
+function getErrorField(error, field) {
+  return typeof error?.[field] === "string" ? error[field] : "";
+}
+
+function buildMailErrorDetail(error) {
+  const parts = [
+    getErrorField(error, "message"),
+    getErrorField(error, "code"),
+    getErrorField(error, "response"),
+    getErrorField(error, "responseText"),
+    getErrorField(error, "serverResponse"),
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  const raw = parts.join(" ").toLowerCase();
+  if (raw.includes("auth") || raw.includes("login")) {
+    return "Dang nhap iCloud IMAP that bai. Hay kiem tra ICLOUD_EMAIL va ICLOUD_APP_PASSWORD app-specific password.";
+  }
+  if (raw.includes("timeout") || raw.includes("timed out")) {
+    return "Ket noi toi iCloud IMAP bi timeout. Thu lai sau hoac kiem tra Render co ra duoc imap.mail.me.com:993.";
+  }
+  if (raw.includes("mailbox") || raw.includes("select")) {
+    return `Khong mo duoc mailbox ${mailboxName}. Hay kiem tra bien MAILBOX.`;
+  }
+
+  return [...new Set(parts)].join(" ");
+}
+
 app.post("/api/mail", async (req, res) => {
   const { emails, token } = req.body || {};
 
@@ -131,9 +160,17 @@ app.post("/api/mail", async (req, res) => {
       await client.logout();
     } catch {}
 
+    console.error("IMAP read failed", {
+      message: error.message,
+      code: error.code,
+      response: error.response,
+      responseText: error.responseText,
+      serverResponse: error.serverResponse,
+    });
+
     return res.status(500).json({
       error: "Khong doc duoc mail.",
-      detail: error.message,
+      detail: buildMailErrorDetail(error),
       code: error.code || "",
     });
   }
