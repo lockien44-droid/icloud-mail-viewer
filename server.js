@@ -70,7 +70,7 @@ function getRequestToken(req) {
 }
 
 function getRequestEmails(req) {
-  return req.body?.emails || req.query.emails || req.query.email || "";
+  return req.body?.emails || req.body?.mail || req.query.emails || req.query.email || req.query.mail || "";
 }
 
 function validateToken(req) {
@@ -230,15 +230,18 @@ app.post("/api/mail", async (req, res) => {
 });
 
 async function logsHandler(req, res) {
+  const targets = parseTargets(getRequestEmails(req));
+  if (!targets.length) {
+    return res.status(400).type("text/plain").send("mail is required");
+  }
+
   const tokenError = validateToken(req);
   if (tokenError) {
     return res.status(tokenError.status).json({ error: tokenError.error });
   }
 
-  const targets = parseTargets(getRequestEmails(req));
-
   try {
-    const result = await fetchMailboxMessages(targets, { includeAll: !targets.length });
+    const result = await fetchMailboxMessages(targets);
     return res.json({
       ok: true,
       ...result,

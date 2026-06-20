@@ -68,11 +68,11 @@ https://TEN-SERVICE.onrender.com/logs
 Endpoint `/logs` ho tro cac cach gui token:
 
 ```text
-GET /logs?token=VIEW_TOKEN
-GET /logs?token=VIEW_TOKEN&emails=alias@icloud.com
+GET /logs?mail=alias@icloud.com&token=VIEW_TOKEN
+GET /logs?emails=alias@icloud.com&token=VIEW_TOKEN
 POST /logs
 Authorization: Bearer VIEW_TOKEN
 X-View-Token: VIEW_TOKEN
 ```
 
-Neu khong truyen `emails`, `/logs` se tra ve cac thu moi nhat trong `MAILBOX`. Neu truyen `emails`, endpoint se loc theo alias giong giao dien web.
+`/logs` yeu cau `mail` hoac `emails`. Neu thieu, endpoint se tra ve `mail is required`.
