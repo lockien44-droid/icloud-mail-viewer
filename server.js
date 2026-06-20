@@ -10,6 +10,15 @@ const mailboxName = process.env.MAILBOX || "INBOX";
 
 app.use(express.json({ limit: "64kb" }));
 app.use(express.static("public"));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-View-Token");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  return next();
+});
 
 app.get("/healthz", (req, res) => {
   res.json({ ok: true });
@@ -47,6 +56,35 @@ function requireServerConfig() {
   return "";
 }
 
+function getRequestToken(req) {
+  const authorization = req.get("authorization") || "";
+  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1] || "";
+  return (
+    req.body?.token ||
+    req.query.token ||
+    req.query.view_token ||
+    req.get("x-view-token") ||
+    bearer ||
+    ""
+  );
+}
+
+function getRequestEmails(req) {
+  return req.body?.emails || req.query.emails || req.query.email || "";
+}
+
+function validateToken(req) {
+  if (!process.env.VIEW_TOKEN) {
+    return { status: 500, error: "Server chua cau hinh VIEW_TOKEN." };
+  }
+
+  if (getRequestToken(req) !== process.env.VIEW_TOKEN) {
+    return { status: 401, error: "Sai ma truy cap." };
+  }
+
+  return null;
+}
+
 function getErrorField(error, field) {
   return typeof error?.[field] === "string" ? error[field] : "";
 }
@@ -76,25 +114,12 @@ function buildMailErrorDetail(error) {
   return [...new Set(parts)].join(" ");
 }
 
-app.post("/api/mail", async (req, res) => {
-  const { emails, token } = req.body || {};
-
-  if (!process.env.VIEW_TOKEN) {
-    return res.status(500).json({ error: "Server chua cau hinh VIEW_TOKEN." });
-  }
-
-  if (token !== process.env.VIEW_TOKEN) {
-    return res.status(401).json({ error: "Sai ma truy cap." });
-  }
-
+async function fetchMailboxMessages(targets, options = {}) {
   const configError = requireServerConfig();
   if (configError) {
-    return res.status(500).json({ error: configError });
-  }
-
-  const targets = parseTargets(emails);
-  if (!targets.length) {
-    return res.status(400).json({ error: "Chua nhap email can xem." });
+    const error = new Error(configError);
+    error.status = 500;
+    throw error;
   }
 
   const client = new ImapFlow({
@@ -114,14 +139,14 @@ app.post("/api/mail", async (req, res) => {
 
     if (!total) {
       await client.logout();
-      return res.json({
+      return {
         emails: targets,
         updatedAt: new Date().toISOString(),
         mailbox: mailboxName,
         scanned: 0,
         count: 0,
         mails: [],
-      });
+      };
     }
 
     const start = Math.max(1, total - fetchLimit + 1);
@@ -134,7 +159,7 @@ app.post("/api/mail", async (req, res) => {
       const parsed = await simpleParser(msg.source);
       const matched = findMatchedTarget(parsed, targets);
 
-      if (matched) {
+      if (matched || options.includeAll) {
         mails.push({
           uid: msg.uid,
           matched,
@@ -153,34 +178,79 @@ app.post("/api/mail", async (req, res) => {
     await client.logout();
 
     mails.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return res.json({
+    return {
       emails: targets,
       updatedAt: new Date().toISOString(),
       mailbox: mailboxName,
       scanned,
       count: mails.length,
       mails,
-    });
+    };
   } catch (error) {
     try {
       await client.logout();
     } catch {}
 
-    console.error("IMAP read failed", {
-      message: error.message,
-      code: error.code,
-      response: error.response,
-      responseText: error.responseText,
-      serverResponse: error.serverResponse,
-    });
+    throw error;
+  }
+}
 
-    return res.status(500).json({
-      error: "Khong doc duoc mail.",
-      detail: buildMailErrorDetail(error),
-      code: error.code || "",
-    });
+function sendMailError(res, error) {
+  console.error("IMAP read failed", {
+    message: error.message,
+    code: error.code,
+    response: error.response,
+    responseText: error.responseText,
+    serverResponse: error.serverResponse,
+  });
+
+  return res.status(error.status || 500).json({
+    error: error.status ? error.message : "Khong doc duoc mail.",
+    detail: error.status ? "" : buildMailErrorDetail(error),
+    code: error.code || "",
+  });
+}
+
+app.post("/api/mail", async (req, res) => {
+  const tokenError = validateToken(req);
+  if (tokenError) {
+    return res.status(tokenError.status).json({ error: tokenError.error });
+  }
+
+  const targets = parseTargets(getRequestEmails(req));
+  if (!targets.length) {
+    return res.status(400).json({ error: "Chua nhap email can xem." });
+  }
+
+  try {
+    return res.json(await fetchMailboxMessages(targets));
+  } catch (error) {
+    return sendMailError(res, error);
   }
 });
+
+async function logsHandler(req, res) {
+  const tokenError = validateToken(req);
+  if (tokenError) {
+    return res.status(tokenError.status).json({ error: tokenError.error });
+  }
+
+  const targets = parseTargets(getRequestEmails(req));
+
+  try {
+    const result = await fetchMailboxMessages(targets, { includeAll: !targets.length });
+    return res.json({
+      ok: true,
+      ...result,
+      logs: result.mails,
+    });
+  } catch (error) {
+    return sendMailError(res, error);
+  }
+}
+
+app.get("/logs", logsHandler);
+app.post("/logs", logsHandler);
 
 app.listen(port, () => {
   console.log(`Mail Viewer chay tai http://localhost:${port}`);

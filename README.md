@@ -54,3 +54,25 @@ Backend se dang nhap vao `ICLOUD_EMAIL`, doc thu moi nhat trong `INBOX`, roi loc
 - `PORT`: cong web, mac dinh `3000`.
 - `FETCH_LIMIT`: so thu moi nhat can quet, mac dinh `100`.
 - `MAILBOX`: mailbox can doc, mac dinh `INBOX`.
+
+## Endpoint `/logs`
+
+Neu can dien vao mot tool khac co o `WORKER API URL`, co the dung URL Render:
+
+```text
+https://TEN-SERVICE.onrender.com/logs
+```
+
+`VIEW_TOKEN` dien dung ma da dat tren Render.
+
+Endpoint `/logs` ho tro cac cach gui token:
+
+```text
+GET /logs?token=VIEW_TOKEN
+GET /logs?token=VIEW_TOKEN&emails=alias@icloud.com
+POST /logs
+Authorization: Bearer VIEW_TOKEN
+X-View-Token: VIEW_TOKEN
+```
+
+Neu khong truyen `emails`, `/logs` se tra ve cac thu moi nhat trong `MAILBOX`. Neu truyen `emails`, endpoint se loc theo alias giong giao dien web.
